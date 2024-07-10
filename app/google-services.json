@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "843358087321",
+    "project_id": "test-f5a9f",
+    "storage_bucket": "test-f5a9f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:843358087321:android:c42722d6e9aba14bb47008",
+        "android_client_info": {
+          "package_name": "com.gunishjain.locationviewer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5T0A0ES_OGrenVpO9KOkmxJhyRV6chKY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
