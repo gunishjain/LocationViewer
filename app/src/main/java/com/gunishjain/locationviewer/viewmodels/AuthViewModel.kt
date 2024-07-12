@@ -125,7 +125,7 @@ class AuthViewModel : ViewModel() {
         uid: String?,
         context: Context
     ) {
-        val userData = UserModel(email, password, name, caste, phone, imageUrl, uid!!)
+        val userData = UserModel(email, password, name, caste, phone, userType = "sharer", imageUrl, uid!!)
         userRef.child(uid).setValue(userData)
             .addOnSuccessListener {
 
