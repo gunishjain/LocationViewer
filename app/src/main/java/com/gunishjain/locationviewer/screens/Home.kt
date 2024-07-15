@@ -17,15 +17,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -37,34 +41,34 @@ import com.gunishjain.locationviewer.viewmodels.MapViewModel
 @Composable
 fun Home(navController: NavHostController) {
 
-    val authViewModel : AuthViewModel = viewModel()
-    val mapsViewModel : MapViewModel = viewModel()
+    val authViewModel: AuthViewModel = viewModel()
+    val mapsViewModel: MapViewModel = viewModel()
     val ctx = LocalContext.current
     val firebaseUser by authViewModel.firebaseUser.collectAsState()
+    val location by mapsViewModel.lastLocation.collectAsState()
+    var shouldAnimateToUserLocation by remember { mutableStateOf(false) }
 
-    val location = com.google.android.gms.maps.model.LatLng(28.613939, 77.209023)
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(location, 10f)
+    val fusedLocationProviderClient = remember {
+        LocationServices.getFusedLocationProviderClient(ctx)
     }
-
-    lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
     val requestPermissionLauncher =
         rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            mapsViewModel.getDeviceLocation(fusedLocationProviderClient)
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                mapsViewModel.getDeviceLocation(fusedLocationProviderClient)
+            }
         }
-    }
 
-     fun askPermissions() = when {
+    fun askPermissions() = when {
         ContextCompat.checkSelfPermission(
             ctx,
             ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED -> {
             mapsViewModel.getDeviceLocation(fusedLocationProviderClient)
         }
+
         else -> {
             requestPermissionLauncher.launch(ACCESS_FINE_LOCATION)
         }
@@ -77,8 +81,36 @@ fun Home(navController: NavHostController) {
                 popUpTo(navController.graph.startDestinationId)
                 launchSingleTop = true
             }
+        } else {
+            askPermissions()
+            shouldAnimateToUserLocation = true
         }
     }
+
+    val cameraPositionState = rememberCameraPositionState {
+//        position = CameraPosition.fromLatLngZoom(
+//            location?.let {
+//                LatLng(it.latitude, it.longitude)
+//            } ?: LatLng(0.0, 0.0),
+//            10f
+//        )
+    }
+
+
+    LaunchedEffect(location, shouldAnimateToUserLocation) {
+        if (shouldAnimateToUserLocation) {
+            location?.let {
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLngZoom(
+                        LatLng(it.latitude, it.longitude), 15f
+                    )
+                )
+            }
+            shouldAnimateToUserLocation = false
+        }
+    }
+
+
 
     Column(
         modifier = Modifier
@@ -88,10 +120,12 @@ fun Home(navController: NavHostController) {
 
         Text(text = "Hi User")
 
-        Row(modifier = Modifier.fillMaxWidth(),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(15.dp),
         ) {
-            Button(modifier = Modifier.width(100.dp),
+            Button(
+                modifier = Modifier.width(125.dp),
                 onClick = {
                     authViewModel.logOut()
                 },
@@ -99,26 +133,29 @@ fun Home(navController: NavHostController) {
                 Text(text = "LOGOUT")
             }
 
-            Button(modifier = Modifier.width(125.dp),
+            Button(
+                modifier = Modifier.width(125.dp),
                 onClick = {
-
+                    shouldAnimateToUserLocation = true
                 },
             ) {
-                Text(text = "Share Location")
+                Text(text = "Show Current")
             }
         }
-
 
 
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState
         ) {
-            Marker(
-                state = MarkerState(position = location),
-                title = "Here"
+            location?.let {
+                Marker(
+                    state = MarkerState(position = LatLng(it.latitude, it.longitude)),
+                    title = "Here"
+                )
 
-            )
+            }
+
         }
     }
 
